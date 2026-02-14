@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, BarChart, Bar, Cell, Area, AreaChart
@@ -131,8 +131,8 @@ const ScriptureHero = ({ quote, onNext, onPrev }) => (
     </div>
 
     <div style={{ display: "flex", gap: 12, marginTop: 18, position: "relative", zIndex: 1 }}>
-      <button onClick={onPrev} style={{ width: 36, height: 36, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.25)", background: "rgba(255,255,255,0.08)", color: C.white, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>‹</button>
-      <button onClick={onNext} style={{ width: 36, height: 36, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.25)", background: "rgba(255,255,255,0.08)", color: C.white, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>›</button>
+      <button onClick={onPrev} onTouchStart={(e) => e.currentTarget.style.transform = "scale(0.9)"} onTouchEnd={(e) => e.currentTarget.style.transform = "scale(1)"} style={{ width: 44, height: 44, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.25)", background: "rgba(255,255,255,0.08)", color: C.white, fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "transform 0.1s" }}>‹</button>
+      <button onClick={onNext} onTouchStart={(e) => e.currentTarget.style.transform = "scale(0.9)"} onTouchEnd={(e) => e.currentTarget.style.transform = "scale(1)"} style={{ width: 44, height: 44, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.25)", background: "rgba(255,255,255,0.08)", color: C.white, fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "transform 0.1s" }}>›</button>
     </div>
   </div>
 );
@@ -155,7 +155,7 @@ const StatCard = ({ label, value, unit, icon, sub }) => (
 // ─── Input Field ───
 const Field = ({ label, placeholder, value, onChange, type, span2 }) => (
   <div style={{ gridColumn: span2 ? "1 / -1" : undefined }}>
-    <label style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", color: C.gray, letterSpacing: "0.6px", marginBottom: 4, display: "block" }}>{label}</label>
+    <label style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: C.gray, letterSpacing: "0.6px", marginBottom: 4, display: "block" }}>{label}</label>
     <input
       type={type || "text"}
       placeholder={placeholder}
@@ -163,7 +163,7 @@ const Field = ({ label, placeholder, value, onChange, type, span2 }) => (
       onChange={onChange}
       style={{
         width: "100%", padding: "10px 12px", borderRadius: 10,
-        border: `1.5px solid #e0e0e0`, fontFamily: "'Barlow', sans-serif", fontSize: 14,
+        border: `1.5px solid #e0e0e0`, fontFamily: "'Barlow', sans-serif", fontSize: 16,
         outline: "none", boxSizing: "border-box", transition: "border-color 0.2s",
         WebkitAppearance: "none", background: C.white,
       }}
@@ -246,28 +246,40 @@ export default function App() {
     return () => clearInterval(t);
   }, []);
 
-  const nextQuote = () => setQuoteIdx((i) => (i + 1) % scriptures.length);
-  const prevQuote = () => setQuoteIdx((i) => (i - 1 + scriptures.length) % scriptures.length);
+  const nextQuote = useCallback(() => setQuoteIdx((i) => (i + 1) % scriptures.length), []);
+  const prevQuote = useCallback(() => setQuoteIdx((i) => (i - 1 + scriptures.length) % scriptures.length), []);
+  const toggleDay = useCallback((i) => setExpandedDay((current) => current === i ? null : i), []);
 
-  // Stats
-  const validWeights = historicalData.filter((d) => d.amWt).map((d) => d.amWt);
-  const startWt = validWeights[0];
-  const lowestWt = Math.min(...validWeights);
-  const totalLoss = (startWt - lowestWt).toFixed(1);
-  const daysTracked = validWeights.length;
-  const weightChartData = historicalData.filter((d) => d.amWt).map((d) => ({ name: d.date, am: d.amWt, pm: d.pmWt || null }));
-
-  const newWeightData = newDates
-    .filter((d) => newEntries[d.dateKey]?.amWt)
-    .map((d) => ({
-      name: d.date,
-      am: parseFloat(newEntries[d.dateKey].amWt) || null,
-      pm: parseFloat(newEntries[d.dateKey].pmWt) || null,
+  // Stats (memoized — historicalData is static)
+  const { validWeights, startWt, lowestWt, totalLoss, daysTracked, weightChartData } = useMemo(() => {
+    const validWeights = historicalData.filter((d) => d.amWt).map((d) => d.amWt);
+    const startWt = validWeights[0];
+    const lowestWt = Math.min(...validWeights);
+    const totalLoss = (startWt - lowestWt).toFixed(1);
+    const daysTracked = validWeights.length;
+    const weightChartData = historicalData.filter((d) => d.amWt).map((d) => ({
+      name: d.date, am: d.amWt, pm: d.pmWt || null,
     }));
+    return { validWeights, startWt, lowestWt, totalLoss, daysTracked, weightChartData };
+  }, []);
 
-  const handleInput = (dateKey, field, value) => {
-    setNewEntries((prev) => ({ ...prev, [dateKey]: { ...prev[dateKey], [field]: value } }));
-  };
+  const newWeightData = useMemo(() =>
+    newDates
+      .filter((d) => newEntries[d.dateKey]?.amWt)
+      .map((d) => ({
+        name: d.date,
+        am: parseFloat(newEntries[d.dateKey].amWt) || null,
+        pm: parseFloat(newEntries[d.dateKey].pmWt) || null,
+      })),
+    [newEntries]
+  );
+
+  const handleInput = useCallback((dateKey, field, value) => {
+    setNewEntries((prev) => {
+      if (prev[dateKey]?.[field] === value) return prev;
+      return { ...prev, [dateKey]: { ...prev[dateKey], [field]: value } };
+    });
+  }, []);
 
   // ─── Save to Supabase ───
   const handleSave = async () => {
@@ -330,7 +342,8 @@ export default function App() {
     fontSize: 13,
     background: activeTab === tab ? C.scarlet : C.white,
     color: activeTab === tab ? C.white : C.gray,
-    transition: "all 0.2s",
+    transition: "background-color 0.2s, color 0.2s, box-shadow 0.2s, transform 0.1s",
+    willChange: "background-color, box-shadow",
     letterSpacing: "0.3px",
     boxShadow: activeTab === tab ? "0 2px 8px rgba(187,0,0,0.3)" : "0 1px 4px rgba(0,0,0,0.06)",
     textAlign: "center",
@@ -359,7 +372,7 @@ export default function App() {
         flexDirection: "column",
         gap: 16,
       }}>
-        <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,500&display=swap" rel="stylesheet" />
+  
         <div style={{ fontSize: 40 }}>🏈</div>
         <p style={{ fontSize: 16, fontWeight: 600, color: C.grayDark }}>Loading tracker...</p>
       </div>
@@ -375,7 +388,7 @@ export default function App() {
       maxWidth: "100vw",
       overflowX: "hidden",
     }}>
-      <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,500&display=swap" rel="stylesheet" />
+
 
       {/* ═══ HEADER ═══ */}
       <div style={{
@@ -407,9 +420,9 @@ export default function App() {
 
         {/* ═══ TABS ═══ */}
         <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-          <button style={tabStyle("history")} onClick={() => setActiveTab("history")}>Last Attempt</button>
-          <button style={tabStyle("track")} onClick={() => setActiveTab("track")}>Track</button>
-          <button style={tabStyle("progress")} onClick={() => setActiveTab("progress")}>Progress</button>
+          <button style={tabStyle("history")} onClick={() => setActiveTab("history")} onTouchStart={(e) => e.currentTarget.style.transform = "scale(0.95)"} onTouchEnd={(e) => e.currentTarget.style.transform = "scale(1)"}> Last Attempt</button>
+          <button style={tabStyle("track")} onClick={() => setActiveTab("track")} onTouchStart={(e) => e.currentTarget.style.transform = "scale(0.95)"} onTouchEnd={(e) => e.currentTarget.style.transform = "scale(1)"}> Track</button>
+          <button style={tabStyle("progress")} onClick={() => setActiveTab("progress")} onTouchStart={(e) => e.currentTarget.style.transform = "scale(0.95)"} onTouchEnd={(e) => e.currentTarget.style.transform = "scale(1)"}> Progress</button>
         </div>
 
         {/* ═══ HISTORY TAB ═══ */}
@@ -473,11 +486,12 @@ export default function App() {
                   const hasDetail = d.dinner || d.postDinner || d.other;
                   const isExpanded = expandedDay === i;
                   return (
-                    <div key={i} onClick={() => hasDetail && setExpandedDay(isExpanded ? null : i)} style={{
+                    <div key={i} onClick={() => hasDetail && toggleDay(i)} style={{
                       padding: "10px 12px", borderRadius: 10, background: C.warmCream,
                       cursor: hasDetail ? "pointer" : "default",
                       border: isExpanded ? `2px solid ${C.scarlet}` : `1px solid transparent`,
-                      transition: "all 0.15s",
+                      transition: "border-color 0.15s",
+                      contain: "layout",
                     }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
@@ -505,7 +519,7 @@ export default function App() {
                               <div style={{ fontSize: 9, color: C.gray }}>PM</div>
                             </div>
                           )}
-                          {hasDetail && <span style={{ fontSize: 12, color: C.grayLight, transform: isExpanded ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s" }}>▾</span>}
+                          {hasDetail && <span style={{ fontSize: 12, color: C.grayLight, transform: isExpanded ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s", willChange: "transform" }}>▾</span>}
                         </div>
                       </div>
                       {isExpanded && (
@@ -610,16 +624,24 @@ export default function App() {
               );
             })}
 
-            <button onClick={handleSave} disabled={saving} style={{
-              width: "100%", padding: "16px", borderRadius: 14, border: "none",
-              background: saving
-                ? C.gray
-                : `linear-gradient(135deg, ${C.scarlet}, ${C.scarletDark})`,
-              color: C.white, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700,
-              fontSize: 18, letterSpacing: "1px", cursor: saving ? "not-allowed" : "pointer",
-              boxShadow: "0 4px 16px rgba(187,0,0,0.3)",
-              position: "sticky", bottom: 16, zIndex: 10,
-            }}>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              onTouchStart={(e) => !saving && (e.currentTarget.style.transform = "scale(0.97)")}
+              onTouchEnd={(e) => (e.currentTarget.style.transform = "scale(1)")}
+              style={{
+                width: "100%", padding: "16px", borderRadius: 14, border: "none",
+                background: saving
+                  ? C.gray
+                  : `linear-gradient(135deg, ${C.scarlet}, ${C.scarletDark})`,
+                color: C.white, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700,
+                fontSize: 18, letterSpacing: "1px", cursor: saving ? "not-allowed" : "pointer",
+                boxShadow: "0 4px 16px rgba(187,0,0,0.3)",
+                position: "sticky",
+                bottom: "max(16px, env(safe-area-inset-bottom))",
+                zIndex: 10,
+                transition: "transform 0.1s",
+              }}>
               {saving ? "SAVING..." : "SAVE PROGRESS"}
             </button>
           </div>
@@ -705,11 +727,11 @@ export default function App() {
                   "But those who hope in the Lord will renew their strength."
                 </p>
                 <p style={{ margin: "0 0 16px", fontSize: 10, fontWeight: 700, color: C.scarlet }}>— Isaiah 40:31</p>
-                <button onClick={() => setActiveTab("track")} style={{
+                <button onClick={() => setActiveTab("track")} onTouchStart={(e) => e.currentTarget.style.transform = "scale(0.95)"} onTouchEnd={(e) => e.currentTarget.style.transform = "scale(1)"} style={{
                   padding: "12px 28px", borderRadius: 10, border: "none",
                   background: C.scarlet, color: C.white, fontWeight: 700,
                   fontFamily: "'Barlow Condensed', sans-serif", fontSize: 15,
-                  cursor: "pointer",
+                  cursor: "pointer", transition: "transform 0.1s",
                 }}>START LOGGING →</button>
               </div>
             )}
