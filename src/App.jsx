@@ -5,6 +5,18 @@ import {
 } from "recharts";
 import { supabase } from "./supabase";
 
+// ─── Inline SVG Icons ───
+const CrossIcon = ({ size = 40, color = "#BB0000" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="9" y="0" width="6" height="32" rx="1" fill={color} />
+    <rect x="0" y="7" width="24" height="6" rx="1" fill={color} />
+  </svg>
+);
+
+const Icon = ({ children, color = C.gray, size = 14 }) => (
+  <span style={{ fontSize: size, fontWeight: 700, color, fontFamily: "'Barlow Condensed', sans-serif", lineHeight: 1 }}>{children}</span>
+);
+
 // ─── Ohio State Color System ───
 const C = {
   scarlet: "#BB0000", scarletDark: "#8B0000", scarletLight: "#D4342A",
@@ -373,8 +385,8 @@ export default function App() {
         gap: 16,
       }}>
   
-        <div style={{ fontSize: 40 }}>🏈</div>
-        <p style={{ fontSize: 16, fontWeight: 600, color: C.grayDark }}>Loading tracker...</p>
+        <CrossIcon size={48} color={C.scarlet} />
+        <p style={{ fontSize: 16, fontWeight: 600, color: C.grayDark, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.5px" }}>Loading tracker...</p>
       </div>
     );
   }
@@ -429,10 +441,10 @@ export default function App() {
         {activeTab === "history" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              <StatCard label="Start Weight" value={startWt} unit="lbs" icon="📅" sub="Jul 29" />
-              <StatCard label="Lowest" value={lowestWt} unit="lbs" icon="🔥" sub={`↓ ${totalLoss} lbs`} />
-              <StatCard label="Best Streak" value="11" unit="days" icon="⚡" sub="Jul 29 – Aug 8" />
-              <StatCard label="Days Tracked" value={daysTracked} unit="/ 20" icon="📋" sub="Faded Aug 13" />
+              <StatCard label="Start Weight" value={startWt} unit="lbs" icon={<Icon color={C.scarlet}>I</Icon>} sub="Jul 29" />
+              <StatCard label="Lowest" value={lowestWt} unit="lbs" icon={<Icon color={C.greenDark}>▼</Icon>} sub={`↓ ${totalLoss} lbs`} />
+              <StatCard label="Best Streak" value="11" unit="days" icon={<Icon color={C.gold}>★</Icon>} sub="Jul 29 – Aug 8" />
+              <StatCard label="Days Tracked" value={daysTracked} unit="/ 20" icon={<Icon color={C.gray}>∣∣∣</Icon>} sub="Faded Aug 13" />
             </div>
 
             <div style={card}>
@@ -686,10 +698,10 @@ export default function App() {
                     const first = amWts[0], last = amWts[amWts.length - 1], low = Math.min(...amWts);
                     const chg = (first - last).toFixed(1);
                     return [
-                      { label: "Start", value: first, icon: "📅" },
-                      { label: "Current", value: last, icon: "⚖️" },
-                      { label: "Lowest", value: low, icon: "🔥" },
-                      { label: "Change", value: `${chg > 0 ? "-" : "+"}${Math.abs(chg)}`, icon: chg > 0 ? "📉" : "📈" },
+                      { label: "Start", value: first, icon: <Icon color={C.scarlet}>I</Icon> },
+                      { label: "Current", value: last, icon: <Icon color={C.grayDark}>⚖</Icon> },
+                      { label: "Lowest", value: low, icon: <Icon color={C.greenDark}>▼</Icon> },
+                      { label: "Change", value: `${chg > 0 ? "-" : "+"}${Math.abs(chg)}`, icon: <Icon color={chg > 0 ? C.greenDark : C.scarlet}>{chg > 0 ? "↓" : "↑"}</Icon> },
                     ].map((s) => <StatCard key={s.label} {...s} unit="lbs" />);
                   })()}
                 </div>
@@ -702,13 +714,13 @@ export default function App() {
                       <div key={d.dateKey} style={{ padding: "10px 0", borderBottom: `1px solid ${C.offWhite}` }}>
                         <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{d.weekday}, {d.date}</div>
                         <div style={{ fontSize: 12, color: C.gray, lineHeight: 1.7 }}>
-                          {e.amWt && <span style={{ marginRight: 12 }}>⚖️ <strong>{e.amWt}</strong>{e.pmWt ? ` / ${e.pmWt}` : ""} lbs</span>}
-                          {e.water && <span style={{ marginRight: 12 }}>💧 {e.water}</span>}
-                          {e.exercise && <span>🏃 {e.exercise}</span>}
-                          {e.breakfast && <div>🍳 {e.breakfast}</div>}
-                          {e.dinner && <div>🍽️ {e.dinner}</div>}
-                          {e.postDinner && <div style={{ color: C.scarlet }}>🍿 {e.postDinner}</div>}
-                          {e.notes && <div style={{ fontStyle: "italic" }}>📝 {e.notes}</div>}
+                          {e.amWt && <span style={{ marginRight: 12 }}><strong style={{ color: C.grayDark }}>{e.amWt}</strong>{e.pmWt ? ` / ${e.pmWt}` : ""} <span style={{ fontSize: 10, color: C.gray }}>lbs</span></span>}
+                          {e.water && <span style={{ marginRight: 12 }}><span style={{ color: C.blue, fontWeight: 700, fontSize: 10 }}>WATER</span> {e.water}</span>}
+                          {e.exercise && <span><span style={{ color: C.greenDark, fontWeight: 700, fontSize: 10 }}>EXERCISE</span> {e.exercise}</span>}
+                          {e.breakfast && <div><span style={{ color: C.gold, fontWeight: 700, fontSize: 10 }}>AM</span> {e.breakfast}</div>}
+                          {e.dinner && <div><span style={{ color: C.grayDark, fontWeight: 700, fontSize: 10 }}>DINNER</span> {e.dinner}</div>}
+                          {e.postDinner && <div style={{ color: C.scarlet }}><span style={{ fontWeight: 700, fontSize: 10 }}>POST</span> {e.postDinner}</div>}
+                          {e.notes && <div style={{ fontStyle: "italic", color: C.gray }}>{e.notes}</div>}
                         </div>
                       </div>
                     );
@@ -720,7 +732,7 @@ export default function App() {
               </>
             ) : (
               <div style={{ ...card, textAlign: "center", padding: "48px 16px" }}>
-                <div style={{ fontSize: 44, marginBottom: 12 }}>📊</div>
+                <CrossIcon size={44} color={C.grayLight} />
                 <h3 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 700, color: C.grayDark, margin: "0 0 6px" }}>NO DATA YET</h3>
                 <p style={{ color: C.gray, fontSize: 13, margin: "0 0 6px" }}>Start logging and your charts appear here.</p>
                 <p style={{ fontSize: 14, fontFamily: "'Playfair Display', Georgia, serif", fontStyle: "italic", color: C.grayDark, margin: "12px 0 4px" }}>
@@ -746,7 +758,7 @@ export default function App() {
           </p>
           <p style={{ margin: "0 0 10px", fontSize: 11, fontWeight: 700, color: C.scarlet }}>— Romans 12:1</p>
           <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
-            <span style={{ fontSize: 10, color: C.grayLight }}>Made with ❤️ by friends who care</span>
+            <span style={{ fontSize: 10, color: C.grayLight }}>Made with love by friends who care</span>
             <span style={{ fontSize: 10, color: C.grayLight }}>·</span>
             <span style={{ fontSize: 10, color: C.scarlet, fontWeight: 700 }}>O-H-I-O!</span>
           </div>
